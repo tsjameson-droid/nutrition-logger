@@ -192,10 +192,273 @@ def find_cofid_db():
             return path
     return None
 
+# Curated lookup table: common food descriptions → CoFID food_code
+# Checked against CoFID 2021 — use shortest/simplest name where possible
+COFID_LOOKUP = {
+    # Dairy
+    "whole milk":              "12-596",  # Milk, whole, pasteurised, average
+    "semi skimmed milk":       "12-313",  # Milk, semi-skimmed, pasteurised, average
+    "skimmed milk":            "12-310",  # Milk, skimmed, pasteurised, average
+    "full fat milk":           "12-596",
+    "butter":                  "17-685",  # Butter, salted
+    "unsalted butter":         "17-661",
+    "cheddar":                 "12-346",  # Cheese, Cheddar, English
+    "cheddar cheese":          "12-346",
+    "greek yoghurt":           "12-555",  # Yogurt, Greek style, plain
+    "greek yogurt":            "12-555",
+    "plain yoghurt":           "12-371",  # Yogurt, plain, whole milk
+    "cream cheese":            "12-349",
+    "double cream":            "12-330",
+    "single cream":            "12-328",
+    # Eggs
+    "eggs scrambled":          "12-963",  # Eggs, chicken, whole, scrambled, without milk
+    "scrambled eggs":          "12-963",
+    "boiled egg":              "12-940",  # Eggs, chicken, whole, boiled
+    "fried egg":               "12-947",  # Eggs, chicken, whole, fried
+    "poached egg":             "12-950",  # Eggs, chicken, whole, poached
+    "raw egg":                 "12-931",  # Eggs, chicken, whole, raw, value
+    # Grains
+    "oats":                    "11-788",  # Porridge oats, unfortified
+    "rolled oats":             "11-788",
+    "porridge oats":           "11-788",
+    "white bread":             "11-980",  # Bread, white, sliced
+    "wholemeal bread":         "11-981",  # Bread, wholemeal, average
+    "brown bread":             "11-983",  # Bread, brown, average
+    "rye bread":               "11-984",  # Bread, rye, average
+    "white rice cooked":       "11-862",  # Rice, white, long grain, boiled
+    "rice white cooked":       "11-862",
+    "basmati rice cooked":     "11-858",  # Rice, white, basmati, boiled
+    "brown rice cooked":       "11-869",  # Rice, brown, wholegrain, boiled
+    "rice brown cooked":       "11-869",
+    "pasta cooked":            "11-1129", # Pasta, white, dried, boiled
+    "pasta white cooked":      "11-1129",
+    "pasta wholemeal cooked":  "11-723",  # Pasta, wholewheat, boiled
+    "couscous cooked":         "11-804",  # Couscous, cooked
+    "quinoa cooked":           "11-819",  # Quinoa, cooked
+    # Meat
+    "chicken breast grilled":  "18-323",  # Chicken, breast, grilled without skin, meat only
+    "chicken breast raw":      "18-100",  # Chicken, breast, raw, meat only
+    "chicken breast baked":    "18-323",
+    "chicken thigh grilled":   "18-331",  # Chicken, thigh, grilled, meat only
+    "beef mince cooked":       "18-470",  # Beef, mince, stewed
+    "beef mince raw":          "18-469",
+    "beef mince":              "18-470",
+    "salmon raw":              "16-356",  # Salmon, farmed, flesh only, raw
+    "salmon fillet raw":       "16-356",
+    "salmon baked":            "16-359",  # Salmon, farmed, flesh only, baked
+    "salmon grilled":          "16-359",
+    "salmon fillet":           "16-359",
+    "tuna canned brine":       "16-416",  # Tuna, canned in brine, drained
+    "tuna canned":             "16-416",
+    "tuna canned oil":         "16-417",  # Tuna, canned in sunflower oil, drained
+    "sardines canned oil":     "16-440",  # Sardines, canned in olive oil, drained
+    "sardines canned":         "16-424",  # Sardines, canned in brine, drained
+    "cod baked":               "16-175",  # Cod, baked
+    "cod raw":                 "16-168",
+    "mackerel grilled":        "16-241",  # Mackerel, grilled
+    # Vegetables
+    "broccoli raw":            "13-502",  # Broccoli, green, raw
+    "broccoli cooked":         "13-503",  # Broccoli, green, boiled
+    "spinach raw":             "13-521",  # Spinach, baby, raw
+    "spinach cooked":          "13-524",  # Spinach, boiled
+    "sweet potato raw":        "13-463",  # Sweet potato, raw, flesh only
+    "sweet potato baked":      "13-464",  # Sweet potato, baked
+    "sweet potato cooked":     "13-465",  # Sweet potato, boiled
+    "cherry tomatoes":         "13-477",  # Tomatoes, cherry, raw
+    "tomatoes raw":            "13-474",  # Tomatoes, raw
+    "avocado":                 "14-386",  # Avocado, Hass, flesh only
+    "cucumber":                "13-488",
+    "carrots raw":             "13-484",
+    "carrots cooked":          "13-485",
+    "onion raw":               "13-493",
+    "garlic":                  "13-491",
+    "mushrooms raw":           "13-492",
+    "mushrooms cooked":        "13-490",
+    "kale raw":                "13-505",
+    "peppers raw":             "13-496",
+    "courgette raw":           "13-487",
+    # Fruit
+    "banana":                  "14-318",  # Bananas, flesh only
+    "apple":                   "14-319",  # Apples, eating, raw, flesh and skin
+    "blueberries":             "14-325",
+    "strawberries":            "14-330",
+    "raspberries":             "14-328",
+    "orange":                  "14-370",
+    "mango":                   "14-351",
+    "grapes":                  "14-340",
+    # Legumes
+    "chickpeas cooked":        "13-662",  # Beans, chick peas, boiled
+    "chickpeas":               "13-662",
+    "lentils cooked":          "13-658",  # Lentils, red, split, boiled
+    "red lentils cooked":      "13-658",
+    "kidney beans cooked":     "13-657",
+        "edamame":                 "13-649",
+    # Nuts & seeds
+    "almonds":                 "14-870",  # Almonds, flaked and ground
+    "walnuts":                 "14-879",  # Walnuts, kernel only
+    "cashews":                 "14-874",
+    "peanuts":                 "14-876",
+    "pumpkin seeds":           "14-884",
+    "sunflower seeds":         "14-886",
+    "chia seeds":              "14-893",
+    "flaxseed":                "14-882",
+    # Fats & oils
+    "olive oil":               "17-038",
+    "coconut oil":             "17-031",
+    "rapeseed oil":            "17-040",
+    "sunflower oil":           "17-043",
+    # Other
+
+    # ── Personalised lookup (built from 3 years of dietary diary) ──────────────
+    # Oils
+    "extra virgin olive oil":       "17-038",
+    "olive oil":                    "17-038",
+    # Grains & noodles
+    "rice white long grain cooked": "11-862",
+        "quinoa cooked":                "11-819",
+    "buckwheat cooked":             "11-820",
+    "millet cooked":                "11-821",
+    "buckwheat dry":                "11-022",
+    "sourdough bread":              "11-981",  # use wholemeal as proxy
+    # Vegetables
+    "aubergine cooked":             "13-651",  # Aubergine, flesh and skin, boiled
+    "aubergine boiled":             "13-651",
+    "eggplant cooked":              "13-651",
+    "green beans cooked":           "13-654",  # Beans, runner, boiled
+    "green bean boiled":            "13-654",
+    "spinach cooked":               "13-550",  # Spinach, baby, boiled
+    "courgette cooked":             "13-628",  # Courgette, boiled
+    "zucchini cooked":              "13-628",
+    "tomato cooked":                "13-479",  # Tomatoes, stewed
+    "tomato boiled":                "13-479",  # Tomatoes, stewed
+    "tomato raw":                   "13-517",  # Tomatoes, standard, raw
+    "cherry tomatoes":              "13-519",
+    "okra cooked":                  "13-652",
+    "pumpkin cooked":               "13-549",
+    "cauliflower cooked":           "13-513",
+    "cabbage green cooked":         "13-511",
+    "cabbage red cooked":           "13-540",
+    "kale cooked":                  "13-649",
+    "bok choy cooked":              "13-516",  # Pak choi, steamed
+    "pak choi cooked":              "13-516",
+    "butternut squash":             "13-644",
+    "butternut squash baked":       "13-644",
+    "celeriac cooked":              "13-585",
+    "cucumber raw":                 "13-523",
+    "avocado":                      "14-386",
+    "peach raw":                    "14-299",
+    "shiitake cooked":              "13-295",
+    "maitake raw":                  "13-294",  # closest mushroom
+    # Eggs
+    "egg raw":                      "12-937",  # Eggs, chicken, whole, raw
+    "egg whole raw":                "12-937",
+    "duck egg":                     "12-920",  # Eggs, duck, whole, raw
+    "duck eggs":                    "12-920",
+    "egg white cooked":             "12-941",  # Eggs, chicken, white, boiled
+    "egg scrambled":                "12-963",
+    # Dairy
+    "whole milk":                   "12-596",
+    "a2 whole milk":                "12-596",
+    "goat cheese soft":             "12-357",
+    "goat cheese":                  "12-357",
+    # Nuts & seeds
+    "walnuts":                      "14-879",
+    "almonds raw":                  "14-896",  # Almonds, whole kernels
+    "almonds":                      "14-896",
+    "macadamia nuts raw":           "14-891",
+    "macadamia nuts":               "14-891",
+    "cashews raw":                  "14-811",
+    "cashews":                      "14-811",
+    # Legumes
+    "lentils boiled":               "13-658",  # Lentils, red, split, boiled
+    "lentils cooked":               "13-658",
+    "white beans boiled":           "13-087",
+        "kidney beans":                 "13-659",  # Beans, red kidney, boiled
+    "adzuki beans":                 "13-655",  # Beans, adzuki, boiled
+    # Protein & meat
+    "chicken breast skinless cooked": "18-323",  # Chicken, breast, grilled without skin
+    "chicken breast cooked":          "18-323",
+    "chicken thigh skin removed":     "18-331",  # Chicken thigh, grilled meat only
+    # Starches
+    "potato boiled":                "13-605",  # Potatoes, old, boiled, flesh only
+    "potato baked":                 "13-620",  # Potatoes, old, baked, flesh only
+    "potatoes baked flesh and skin": "13-491",  # Potatoes, old, baked, flesh and skin
+    "sweet potato baked":           "13-672",
+    "sweet potato boiled":          "13-646",  # Sweet potato, flesh only, boiled
+    # Bread
+    "white bread":                  "11-980",
+    # Other
+    "honey":                        "17-050",
+    # ── Exact search terms from validation (Claude-generated) ──────────────────
+    # These keys match EXACTLY what Claude generates as search terms
+    "mushrooms cooked":             "13-505",  # Mushrooms, white, raw (closest in CoFID)
+    "carrots cooked":               "13-497",  # Carrots, old, boiled
+    "asparagus cooked":             "13-638",  # Asparagus, steamed
+    "oil olive":                    "17-038",   # Claude generates this for olive oil
+    "oil extra virgin olive":       "17-038",
+    "egg raw whole":                "12-937",   # Whole egg raw
+    "egg chicken raw":              "12-937",
+    "broccoli green boiled":        "13-503",   # Regular broccoli boiled
+    "broccoli fresh cooked":        "13-503",
+    "broccoli cooked fresh":        "13-503",
+    "courgette boiled":             "13-628",
+    "courgette fresh cooked":       "13-628",
+    "aubergine boiled":             "13-651",
+    "aubergine fresh cooked":       "13-651",
+    "chicken breast skinless":      "18-323",
+    "chicken breast skinless cooked":"18-323",
+    "beans black boiled":           "13-063",  # Beans, blackeye - closest to black beans in CoFID
+    "black beans boiled":           "13-063",
+    "black beans canned":           "13-063",
+    "beans black canned":           "13-063",
+    "mushrooms common boiled":      "13-505",  # Mushrooms, white, raw
+    "mushroom fresh cooked":        "13-505",
+    "mushrooms fresh cooked":       "13-505",
+    "cauliflower boiled":           "13-513",
+    "cauliflower fresh cooked":     "13-513",
+        "rice white long grain":        "11-862",
+    "rice white enriched cooked":   "11-862",
+    "salad tossed":                 "15-648",
+    "salad mixed greens":           "15-648",
+    "salad mixed greens dressing":  "15-648",
+    "red wine":                     "17-752",
+    "cod liver oil":                "17-488",
+    "hazelnut butter":              "14-874",
+    "cashew butter":                "14-811",
+    "hummus":                       "13-556",
+    "houmous":                      "13-556",
+    "fennel raw":                   "13-241",
+    "fennel bulb raw":              "13-241",
+    "swiss chard cooked":           "13-224",
+    "chard cooked":                 "13-224",
+    "artichoke cooked":             "13-154",
+    "globe artichoke":              "13-154",
+    "red pepper raw":               "13-524",
+    "red bell pepper raw":          "13-524",
+    "garlic raw":                   "13-491",
+    "courgette raw":                "13-627",
+    "zucchini raw":                 "13-627",
+    "tossed salad":                 "15-648",
+    "green salad":                  "15-648",
+    "asparagus cooked":             "13-591",
+    
+    "mushrooms cooked":             "13-297",
+    "mushroom boiled":              "13-297",
+    "cauliflower cooked":           "13-513",
+    "cauliflower boiled":           "13-513",
+    "pesto":                        "15-838",
+    "lentil soup":                  "17-808",
+    "tossed salad with dressing":   "15-648",
+    "honey":                   "17-118",
+    "sugar":                   "17-079",
+    "soy sauce":               "17-150",
+    "tomato puree":            "13-480",
+}
+
 def search_cofid(query: str) -> object:
     """
-    Search CoFID database for a food using keyword matching.
-    Returns a dict with food info and nutrients per 100g, or None.
+    Search CoFID database. First tries curated lookup table,
+    then falls back to word-order-independent fuzzy search.
     """
     db_path = find_cofid_db()
     if not db_path:
@@ -204,19 +467,36 @@ def search_cofid(query: str) -> object:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
 
-    # Try progressively looser matches
-    words = [w for w in query.lower().split() if len(w) > 2]
-    for num_words in range(len(words), 0, -1):
-        combo = " ".join(words[:num_words])
-        pattern = "%" + combo.replace(" ", "%") + "%"
-        results = conn.execute(
-            "SELECT * FROM cofid WHERE LOWER(food_name) LIKE ? LIMIT 5",
-            (pattern,)
-        ).fetchall()
-        if results:
-            conn.close()
-            row = dict(results[0])
-            return row
+    # 1. Try curated lookup table (exact and partial key matches)
+    query_lower = query.lower().strip()
+    # Try progressively shorter versions of the query
+    for length in range(len(query_lower.split()), 0, -1):
+        partial = " ".join(query_lower.split()[:length])
+        if partial in COFID_LOOKUP:
+            food_code = COFID_LOOKUP[partial]
+            result = conn.execute(
+                "SELECT * FROM cofid WHERE food_code = ?", (food_code,)
+            ).fetchone()
+            if result:
+                conn.close()
+                return dict(result)
+
+    # 2. Word-order-independent search (all words must appear)
+    words = [w for w in query_lower.split() if len(w) > 2]
+    if words:
+        for num_words in range(len(words), 0, -1):
+            subset = words[:num_words]
+            conditions = " AND ".join(
+                [f"LOWER(food_name) LIKE ?" for _ in subset]
+            )
+            params = [f"%{w}%" for w in subset]
+            results = conn.execute(
+                f"SELECT * FROM cofid WHERE {conditions} ORDER BY LENGTH(food_name) LIMIT 3",
+                params
+            ).fetchall()
+            if results:
+                conn.close()
+                return dict(results[0])
 
     conn.close()
     return None
@@ -462,48 +742,114 @@ Rules:
 
 
 CLEAN_QUERY_PROMPT = """
-You are a USDA food database search expert. Convert the user's food description
-into the best possible search term for the USDA SR Legacy database.
+You are a food database search assistant. Your job is to convert a food description
+from a diet diary into a clean, accurate search term for a food composition database.
 
 Rules:
-- Use generic names, not brand names (e.g. "Warburtons rye bread" → "bread rye")
-- Strip container descriptions (e.g. "sardines in tin" → "sardines canned oil")
-- Expand abbreviations (e.g. "choc" → "chocolate")
-- For plain cooked meats, keep the cooking method but NEVER use "breaded", "battered", "coated", "processed", "tenderloin", "tenders", "nuggets", or any brand names
-- For coffee with nothing added, use "coffee brewed"
-- For plain tea, use "tea brewed"
-- For water, use "water tap"
-- Return ONLY the search term — no explanation, no punctuation, just 1-5 words.
+1. ALWAYS keep the core food name — if the diary says "carrots", search for "carrots"
+2. Keep the cooking method if relevant (e.g. "carrots boiled", "chicken grilled")
+3. Strip brand names, container types, and irrelevant qualifiers
+4. Strip filler words like "from fresh", "homemade", "a portion of"
+5. For plain meats, use the cut + cooking method ONLY — never add "breaded", "coated", "processed"
+6. For whole eggs, always say "egg whole" not just "egg white" or "egg yolk"
+7. For coffee black, use "coffee"
+8. For olive oil, use "olive oil" (not "oil olive")
+9. Return ONLY the search term — 1-4 words, no punctuation, no explanation
 
 Examples:
+  "carrots, cooked from fresh" → "carrots boiled"
+  "broccoli, cooked from fresh" → "broccoli boiled"
+  "mushrooms, cooked from fresh" → "mushrooms boiled"
+  "asparagus, cooked from fresh" → "asparagus boiled"
+  "cauliflower, cooked from fresh" → "cauliflower boiled"
+  "courgette, cooked from fresh" → "courgette boiled"
+  "aubergine, cooked" → "aubergine boiled"
+  "spinach, cooked from fresh" → "spinach boiled"
+  "zucchini, cooked from fresh" → "courgette boiled"
+  "chicken breast, skinless, cooked" → "chicken breast grilled"
   "chicken breast grilled" → "chicken breast grilled"
-  "chicken thigh cooked" → "chicken thigh cooked"
-  "beef mince cooked" → "beef mince cooked"
-  "pork chop grilled" → "pork chop grilled"
-  "rolled oats porridge" → "oats regular unenriched"
-  "whole milk" → "milk fluid whole"
-  "black coffee" → "coffee brewed"
-  "sardines in olive oil tin" → "sardines canned oil"
-  "rye bread slice" → "bread rye"
-  "cherry tomatoes" → "tomatoes raw"
-  "salmon fillet pan fried" → "salmon cooked dry heat"
-  "steamed broccoli" → "broccoli cooked"
-  "cooked brown rice" → "rice brown cooked"
-  "dark chocolate 85%" → "chocolate dark"
-  "olive oil" → "oil olive"
-  "greek yoghurt" → "yogurt greek plain"
-  "cheddar cheese" → "cheese cheddar"
+  "egg, raw" → "egg whole raw"
+  "egg, whole, cooked, scrambled" → "egg scrambled"
+  "extra virgin olive oil" → "olive oil"
+  "rice, white, long-grain, regular, enriched, cooked" → "rice white cooked"
+  "tossed salad, plain, with dressing" → "salad green"
+  "chocolate, dark, 70-85% cacao" → "chocolate dark"
+  "sweet potato, baked" → "sweet potato baked"
+  "black beans, canned, drained" → "black beans"
+  "soba noodles, buckwheat based, cooked" → "soba noodles cooked"
+  "walnuts" → "walnuts"
+  "almonds, raw" → "almonds raw"
+  "salmon fillet, pan fried" → "salmon grilled"
+  "whole milk" → "whole milk"
+  "greek yoghurt, full fat" → "greek yoghurt"
+"""
+
+VALIDATE_PROMPT = """
+You are checking whether a food database search term correctly represents
+a food item from a diet diary.
+
+Given the original food name and the proposed search term, reply with:
+- The search term if it is correct and will find the right food
+- A corrected search term if the proposed one is wrong or misleading
+
+Rules for a GOOD search term:
+- Contains the core food name from the diary entry
+- If diary says "carrots" the search must include "carrot"
+- If diary says "mushrooms" the search must include "mushroom"
+- If diary says "asparagus" the search must include "asparagus"
+- Cooking method is preserved if present
+- No brand names, no filler words
+- 1-4 words only
+
+Reply with ONLY the final search term — no explanation.
 """
 
 def clean_food_query(food_name: str, client: anthropic.Anthropic) -> str:
-    """Use Claude to convert a raw food description into a clean USDA search term."""
+    """
+    Two-step process:
+    1. Claude generates a search term from the food description
+    2. Claude validates the search term actually matches the food
+    Returns the validated search term.
+    """
+    # Step 1: Generate search term
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=20,
         system=CLEAN_QUERY_PROMPT,
         messages=[{"role": "user", "content": food_name}]
     )
-    return response.content[0].text.strip().lower()
+    search_term = response.content[0].text.strip().lower()
+
+    # Step 2: Validate — quick sanity check
+    # Extract the core food word(s) from the original name
+    # If none of the core words appear in the search term, ask Claude to fix it
+    core_words = [w.lower() for w in food_name.replace(",", " ").split()
+                  if len(w) > 3 and w.lower() not in {
+                      "cooked", "fresh", "from", "with", "without", "plain",
+                      "drained", "canned", "based", "boiled", "baked", "fried",
+                      "grilled", "steamed", "roasted", "homemade", "regular",
+                      "enriched", "long-grain", "skinless", "boneless", "whole",
+                      "organic", "natural", "unsalted", "salted", "dried"
+                  }][:2]
+
+    term_words = search_term.lower().split()
+    match_found = any(
+        any(cw in tw or tw in cw for tw in term_words)
+        for cw in core_words
+    )
+
+    if not match_found and core_words:
+        # Search term doesn't contain the core food — ask Claude to validate
+        validate_response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=20,
+            system=VALIDATE_PROMPT,
+            messages=[{"role": "user", "content": f"Diary entry: {food_name}\nProposed search term: {search_term}"}]
+        )
+        corrected = validate_response.content[0].text.strip().lower()
+        return corrected
+
+    return search_term
 
 
 def parse_diet_log(raw_text: str, client: anthropic.Anthropic) -> list[dict]:
@@ -544,77 +890,208 @@ def search_usda(query: str, usda_key: str) -> object:
     return None
 
 
-def search_all_databases(query: str, usda_key: str) -> dict:
+PICK_MATCH_PROMPT = """
+You are a food matching expert. A user has logged a food item in their diet diary.
+You will be given the original diary entry and a list of candidate matches from
+food composition databases (USDA and CoFID).
+
+Your job: pick the single best match, or say NONE if nothing is close enough.
+
+Rules:
+- The match must be the same food as the diary entry — not a different food with
+  a similar name
+- Prefer plain/generic versions over branded, processed, or composite dishes
+- Prefer the cooking method stated in the diary (raw, boiled, grilled, baked etc.)
+- If the diary says "carrots boiled", a match called "Carrots, old, boiled in
+  unsalted water" is correct; "Carrot cake" or "Carrot soup" is not
+- If no candidate is clearly the right food, reply NONE
+
+Reply with ONLY the candidate number (1, 2, 3...) or NONE.
+No explanation. Just the number or NONE.
+"""
+
+def pick_best_match(original_food: str, candidates: list, client) -> object:
     """
-    Search both USDA and CoFID. Returns:
-    {
-        "source": "usda" or "cofid",
-        "name": food name,
-        "match": raw match object,
-        "nutrients_100g": dict of nutrients per 100g
-    }
-    Prefers CoFID for UK foods, USDA as primary fallback.
-    Both are tried and the one with more nutrient data wins.
+    Ask Claude to pick the best match from a list of candidates.
+    candidates: list of dicts with keys: number, name, source
+    Returns the chosen candidate dict or None.
     """
-    usda_match = None
-    cofid_match = None
+    if not candidates:
+        return None
 
-    # Try USDA
+    lines = [f"Diary entry: {original_food}", "", "Candidates:"]
+    for c in candidates:
+        lines.append(f"  {c['number']}. [{c['source']}] {c['name']}")
+
+    prompt = "\n".join(lines)
+
+    response = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=5,
+        system=PICK_MATCH_PROMPT,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    reply = response.content[0].text.strip().upper()
+
+    if reply == "NONE":
+        return None
     try:
-        usda_match = search_usda(query, usda_key)
-    except Exception:
-        pass
+        num = int(reply)
+        chosen = next((c for c in candidates if c["number"] == num), None)
+        return chosen
+    except (ValueError, StopIteration):
+        return None
 
-    # Try CoFID
-    try:
-        cofid_match = search_cofid(query)
-    except Exception:
-        pass
 
-    # Score each match by nutrient completeness
-    usda_nutrients = {}
-    cofid_nutrients = {}
+def get_candidates(query: str, usda_key: str, n: int = 5) -> list:
+    """
+    Gather up to n candidates from both USDA and CoFID.
+    Returns list of dicts: {number, source, name, match, nutrients_100g}
+    """
+    candidates = []
+    num = 1
 
-    if usda_match:
+    # USDA candidates
+    for data_type in ["SR Legacy", "Foundation"]:
         try:
-            usda_nutrients = get_usda_nutrients(usda_match["fdcId"], usda_key)
+            params = {
+                "query": query,
+                "api_key": usda_key,
+                "dataType": data_type,
+                "pageSize": 3,
+            }
+            resp = requests.get(USDA_SEARCH_URL, params=params, timeout=10)
+            if resp.status_code == 404:
+                continue
+            resp.raise_for_status()
+            foods = resp.json().get("foods", [])
+            for food in foods[:2]:
+                candidates.append({
+                    "number": num,
+                    "source": "USDA",
+                    "name": food["description"],
+                    "match": food,
+                    "fdc_id": food["fdcId"],
+                    "nutrients_100g": None,  # fetched later if chosen
+                })
+                num += 1
+                if num > n:
+                    break
+        except Exception:
+            pass
+        if num > n:
+            break
+
+    # CoFID candidates (word-order-independent search)
+    db_path = find_cofid_db()
+    if db_path:
+        try:
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            words = [w for w in query.lower().split() if len(w) > 2]
+            for num_words in range(len(words), 0, -1):
+                subset = words[:num_words]
+                conditions = " AND ".join(
+                    [f"LOWER(food_name) LIKE ?" for _ in subset]
+                )
+                params = [f"%{w}%" for w in subset]
+                results = conn.execute(
+                    f"SELECT * FROM cofid WHERE {conditions} ORDER BY LENGTH(food_name) LIMIT 3",
+                    params
+                ).fetchall()
+                if results:
+                    for row in results[:2]:
+                        row = dict(row)
+                        candidates.append({
+                            "number": num,
+                            "source": "CoFID",
+                            "name": row["food_name"],
+                            "match": row,
+                            "fdc_id": None,
+                            "nutrients_100g": None,
+                        })
+                        num += 1
+                    break
+            conn.close()
         except Exception:
             pass
 
-    if cofid_match:
-        cofid_nutrients = cofid_to_nutrients(cofid_match)
+    return candidates
 
-    # Count meaningful (non-None, non-zero) nutrients for scoring
-    def score(d):
-        return sum(1 for v in d.values() if v is not None and v != 0.0)
 
-    usda_score  = score(usda_nutrients)
-    cofid_score = score(cofid_nutrients)
+def search_all_databases(query: str, usda_key: str, original_food: str = None,
+                         client=None) -> dict:
+    """
+    Claude-picks architecture:
+    1. Check curated lookup table — if found, trust it unconditionally
+    2. Otherwise gather top candidates from USDA + CoFID
+    3. Claude picks the best match (or NONE)
+    4. Fetch full nutrients for the chosen match
 
-    # Pick whichever has more populated nutrient values
-    # CoFID wins on a tie (UK-specific data preferred)
-    if cofid_score >= usda_score and cofid_match:
-        return {
-            "source": "cofid",
-            "name": cofid_match.get("food_name", ""),
-            "match": cofid_match,
-            "nutrients_100g": cofid_nutrients,
-        }
-    elif usda_score > 0 and usda_match:
+    original_food: the raw diary entry (used by Claude to make the right pick)
+    client: Anthropic client (required for Claude-picks)
+    """
+    query_lower = query.lower().strip()
+
+    # ── 1. Curated lookup ─────────────────────────────────────────────────────
+    for length in range(len(query_lower.split()), 0, -1):
+        partial = " ".join(query_lower.split()[:length])
+        if partial in COFID_LOOKUP:
+            db_path = find_cofid_db()
+            if db_path:
+                conn = sqlite3.connect(db_path)
+                conn.row_factory = sqlite3.Row
+                food_code = COFID_LOOKUP[partial]
+                row = conn.execute(
+                    "SELECT * FROM cofid WHERE food_code = ?", (food_code,)
+                ).fetchone()
+                conn.close()
+                if row:
+                    row = dict(row)
+                    nutrients = cofid_to_nutrients(row)
+                    if nutrients:
+                        return {
+                            "source": "cofid",
+                            "name": row.get("food_name", ""),
+                            "match": row,
+                            "nutrients_100g": nutrients,
+                        }
+
+    # ── 2. Gather candidates ──────────────────────────────────────────────────
+    candidates = get_candidates(query, usda_key)
+    if not candidates:
+        return None
+
+    # ── 3. Claude picks ───────────────────────────────────────────────────────
+    food_label = original_food or query
+    if client:
+        chosen = pick_best_match(food_label, candidates, client)
+    else:
+        chosen = candidates[0]  # fallback if no client
+
+    if chosen is None:
+        return None
+
+    # ── 4. Fetch full nutrients for chosen match ───────────────────────────────
+    if chosen["source"] == "USDA":
+        try:
+            nutrients = get_usda_nutrients(chosen["fdc_id"], usda_key)
+        except Exception:
+            nutrients = {}
         return {
             "source": "usda",
-            "name": usda_match.get("description", ""),
-            "match": usda_match,
-            "nutrients_100g": usda_nutrients,
+            "name": chosen["name"],
+            "match": chosen["match"],
+            "nutrients_100g": nutrients,
         }
-    elif cofid_match:
+    else:
+        nutrients = cofid_to_nutrients(chosen["match"])
         return {
             "source": "cofid",
-            "name": cofid_match.get("food_name", ""),
-            "match": cofid_match,
-            "nutrients_100g": cofid_nutrients,
+            "name": chosen["name"],
+            "match": chosen["match"],
+            "nutrients_100g": nutrients,
         }
-    return None
 
 
 def get_usda_nutrients(fdc_id: int, usda_key: str) -> dict:
@@ -734,8 +1211,12 @@ class NutritionLogger:
             search_term = clean_food_query(food_name_raw, self.client)
             print(f"     \u27f3 Search term: '{search_term}'")
 
-            # Search USDA + CoFID, pick best match
-            result = search_all_databases(search_term, self.usda_key)
+            # Search USDA + CoFID — Claude picks best match
+            result = search_all_databases(
+                search_term, self.usda_key,
+                original_food=food_name_raw,
+                client=self.client
+            )
             if result is None:
                 print(f"     \u26a0 No match found in any database \u2014 logged with nulls")
                 row = self._build_row(

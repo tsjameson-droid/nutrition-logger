@@ -36,6 +36,7 @@ print("║  3 — Load from a handwritten PDF       ║")
 print("║  4 — Load from a photo (JPG/PNG)       ║")
 print("║  5 — Edit text directly in this script ║")
 print("║  6 — Retry last transcription           ║")
+print("║  7 — Log a saved recipe                 ║")
 print("╚════════════════════════════════════════╝")
 print(f"\n  Logging for: {TODAY}")
 
@@ -161,7 +162,50 @@ elif choice == "6":
     with open("last_transcription.txt") as tf:
         diet_text = tf.read()
     print(f"  Loaded previous transcription ({len(diet_text)} characters)")
-    print("\n  Preview:\n  " + diet_text[:300] + "...")
+    print(f"
+  Preview:
+  {diet_text[:300]}...")
+
+elif choice == "7":
+    import sqlite3, json
+    if not os.path.exists("recipes.db"):
+        print("No recipes saved yet. Run python3 recipes.py to create one.")
+        logger.close()
+        sys.exit(0)
+    conn = sqlite3.connect("recipes.db")
+    conn.row_factory = sqlite3.Row
+    recipes = conn.execute("SELECT id, name, servings FROM recipes ORDER BY name").fetchall()
+    if not recipes:
+        print("No recipes saved yet.")
+        logger.close()
+        sys.exit(0)
+    print("
+Saved recipes:")
+    for i, r in enumerate(recipes, 1):
+        print(f"  {i} — {r['name']}")
+    choice2 = input("
+Choose number: ").strip()
+    if not choice2.isdigit() or int(choice2) not in range(1, len(recipes)+1):
+        print("Invalid choice.")
+        logger.close()
+        sys.exit(1)
+    recipe = dict(recipes[int(choice2)-1])
+    servings_str = input(f"How many servings? [{recipe['servings']}]: ").strip()
+    servings = float(servings_str) if servings_str else float(recipe["servings"])
+    ingredients = conn.execute(
+        "SELECT food_name, quantity_g FROM recipe_ingredients WHERE recipe_id = ?",
+        (recipe["id"],)
+    ).fetchall()
+    conn.close()
+    lines = []
+    for ing in ingredients:
+        scaled_qty = round(ing["quantity_g"] * servings / float(recipe["servings"]), 1)
+        lines.append(f"{ing['food_name']} {scaled_qty}g")
+    diet_text = f"[RECIPE: {recipe['name']}]
+" + "
+".join(lines)
+    print(f"
+✓ Loaded recipe '{recipe['name']}' ({servings} serving(s))")
 
 else:
     print("Invalid choice.")
