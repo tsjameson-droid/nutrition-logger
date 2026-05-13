@@ -6,3 +6,7 @@ __pycache__/
 last_transcription.txt
 get-pip.py
 validate_nutrition_logger.py
+recipes.db
+cronometer_combined.csv
+validation_results.json
+validate_vs_cronometer.py
