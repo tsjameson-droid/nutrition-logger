@@ -24,7 +24,7 @@ from . import hds as _hds
 from .lookup import lookup_food, clean_query, scale_nutrients, to_grams
 from .format import confirmation_slack, query_reply_slack, daily_total_line
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # ── Client ────────────────────────────────────────────────────────────────────
 
@@ -161,7 +161,7 @@ def parse(text: str, user_id: str = "gabriel") -> list:
                 if eat_out:
                     item["_ambiguity_note"] = "eaten_out: composition unknown"
         except Exception as e:
-            log.warning(f"Parse error: {e}")
+            logger.warning(f"Parse error: {e}")
             parsed = []
         items.extend(parsed)
 
@@ -244,7 +244,7 @@ def log(
                 query_term = clean_query(food_raw, _client())
                 result = lookup_food(query_term, food_raw, _client())
             except Exception as e:
-                log.warning(f"Lookup failed for '{food_raw}': {e}")
+                logger.warning(f"Lookup failed for '{food_raw}': {e}")
                 result = None
 
             if result:
