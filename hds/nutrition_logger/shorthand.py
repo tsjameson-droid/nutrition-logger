@@ -110,7 +110,12 @@ def check_special_cases(transcript: str) -> Optional[dict]:
     t = transcript.lower().strip()
 
     # special_cases is a dict keyed by case name
-    for name, case in data.get("special_cases", {}).items():
+    special_cases = data.get("special_cases", {})
+    if isinstance(special_cases, list):
+        items = [(c.get("name", ""), c) for c in special_cases]
+    else:
+        items = special_cases.items()
+    for name, case in items:
         triggers = case.get("triggers", [])
         if any(tr.lower() in t for tr in triggers):
             return {
