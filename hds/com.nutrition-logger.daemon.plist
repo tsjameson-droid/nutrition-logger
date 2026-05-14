@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+
+    <key>Label</key>
+    <string>com.nutrition-logger.daemon</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>-m</string>
+        <string>nutrition_logger.daemon</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/gabriel/projects/nutrition-logger</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>NUTRITION_LOGGER_ENV</key>
+        <string>prod</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <!-- Restart automatically if it crashes -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Wait 5s before restarting after a crash -->
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+
+    <!-- Log stdout and stderr -->
+    <key>StandardOutPath</key>
+    <string>/Users/gabriel/projects/nutrition-logger/logs/daemon.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/gabriel/projects/nutrition-logger/logs/daemon.err</string>
+
+    <!-- Start at login -->
+    <key>RunAtLoad</key>
+    <true/>
+
+</dict>
+</plist>

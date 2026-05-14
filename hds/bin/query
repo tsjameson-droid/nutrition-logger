@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""
+bin/query
+==========
+CLI wrapper for core.answer() and core.query().
+Usage:
+    query "what did I eat today?"
+    query --days 7 "average protein this week"
+    query --structured "what did I eat today?"   # returns JSON
+"""
+
+import sys
+import os
+import json
+import argparse
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from nutrition_logger.core import answer, query as structured_query
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Query nutrition data")
+    parser.add_argument("question", nargs="?", help="Question in plain English")
+    parser.add_argument("--days", type=int, default=1, help="Days back to query")
+    parser.add_argument("--date", help="Reference date YYYY-MM-DD")
+    parser.add_argument("--user", default="gabriel", help="User ID")
+    parser.add_argument("--structured", action="store_true",
+                        help="Return structured JSON (for scientists/agents)")
+    args = parser.parse_args()
+
+    if args.question:
+        question = args.question
+    elif not sys.stdin.isatty():
+        question = sys.stdin.read().strip()
+    else:
+        print("Usage: query \"your question\"", file=sys.stderr)
+        sys.exit(1)
+
+    if args.structured:
+        result = structured_query(
+            question=question,
+            user_id=args.user,
+            days_back=args.days,
+            log_date=args.date,
+        )
+        print(json.dumps(result, indent=2, default=str))
+    else:
+        reply = answer(
+            question=question,
+            user_id=args.user,
+            days_back=args.days,
+            log_date=args.date,
+        )
+        print(reply)
+
+
+if __name__ == "__main__":
+    main()

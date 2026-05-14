@@ -1,0 +1,108 @@
+# gabriel_shorthand.yaml
+# ========================
+# Canonical shorthand registry for Gabriel's nutrition logger.
+# SOURCE OF TRUTH: ~/projects/hdsystem/src/hdsystem/composition/table.py
+# This file is generated/updated by HDS — do not edit manually.
+# When Eleonora confirms carton macros, HDS updates the source and re-exports here.
+#
+# Schema:
+#   shorthands[].family           : unique identifier
+#   shorthands[].triggers         : case-insensitive SUBSTRING patterns (any match fires)
+#   shorthands[].negative_triggers: if ANY appear in transcript, rule does NOT fire
+#   shorthands[].expands_to       : food items with direct macros (no DB lookup)
+#     .label                      : food name (preserved verbatim in logs)
+#     .dose_ml                    : volume in ml
+#     .kcal / protein_g / fat_g / carbs_g / sugar_g / sodium_mg
+#     .verification               : provenance note
+#
+#   special_cases[]               : flag-only rules, no macro expansion
+#   parsing_rules[]               : parse-time behaviour rules (not expansions)
+
+shorthands:
+
+  - family: espresso_latte_hokkaido
+    description: "Default espresso latte — Hokkaido A2 whole milk 4 fl oz"
+    triggers:
+      - "espresso latte"
+      - "expresso latte"
+      - "milk latte"
+      - "milk espresso"
+      - "hokkaido"
+      - "italia blend latte"
+      - "italian blend latte"
+      - "italia blend espresso"
+      - "italian blend espresso"
+      - "tsuruoka"
+      - "sui roca"
+      - "sai roca"
+      - "su roca"
+    negative_triggers:
+      - "koji"
+    expands_to:
+      - label: "Hokkaido A2 whole milk"
+        dose_ml: 118
+        kcal: 75
+        protein_g: 4.0
+        fat_g: 4.3
+        carbs_g: 5.5
+        sugar_g: 5.5
+        sodium_mg: 60
+        verification: "generic whole-milk reference; refine when Eleonora confirms carton macros"
+
+  - family: koji_milk_espresso
+    description: "Marukome Koji barista (rice koji) espresso drink"
+    triggers:
+      - "koji milk espresso"
+      - "koji milk latte"
+      - "koji barista"
+      - "koji latte"
+    negative_triggers: []
+    expands_to:
+      - label: "Marukome Koji barista (rice koji)"
+        dose_ml: 118
+        kcal: 40
+        protein_g: null
+        fat_g: null
+        carbs_g: null
+        sugar_g: null
+        sodium_mg: null
+        ingredients: "rice koji (domestic), rice, rice oil, emulsifier, gellan gum"
+        verification: "user-corrected 2026-05-03 carton read; manufacturer page (78 kcal/100ml) likely different SKU"
+
+
+special_cases:
+
+  - name: eaten_out
+    description: >
+      Eating-out flag. Tag row composition=unknown, eat_out=true. No macro guessing.
+      Exception: coffee out still fires espresso_latte_hokkaido (most cafes use regular milk).
+    triggers:
+      - "i'm out"
+      - "weekend out"
+      - "eaten out"
+      - "eating out"
+    flags:
+      composition: unknown
+      eat_out: true
+    coffee_exception: true
+
+
+parsing_rules:
+
+  - name: espresso_shot_weight
+    description: >
+      Shot weight is voice-stated in grams. Trust precisely — do NOT substitute
+      a generic default (e.g. 30g). Examples: "28g of the blend espresso",
+      "20g Costa Rica espresso shot".
+    action: use_stated_weight
+
+  - name: bean_origin_preserve
+    description: >
+      Preserve bean origin verbatim in food_name_raw. Never collapse to generic "espresso".
+      "Costa Rica espresso" != "blend espresso" — different beans, different allergen profile.
+    action: preserve_verbatim
+    examples:
+      - "Costa Rica espresso"
+      - "blend espresso"
+      - "Ethiopia natural espresso"
+      - "Italia blend espresso"

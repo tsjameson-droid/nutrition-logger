@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""
+bin/log
+========
+CLI wrapper for core.log().
+Usage:
+    log "had two eggs and toast"
+    echo "espresso latte" | log
+    log --date 2026-05-12 "natto 100g, rice 180g"
+"""
+
+import sys
+import os
+import argparse
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from nutrition_logger.core import log
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Log food intake")
+    parser.add_argument("text", nargs="?", help="Food log text")
+    parser.add_argument("--date", help="Log date YYYY-MM-DD (default: today)")
+    parser.add_argument("--user", default="gabriel", help="User ID")
+    parser.add_argument("--source", default="terminal", help="Source")
+    args = parser.parse_args()
+
+    # Accept text from argument or stdin
+    if args.text:
+        text = args.text
+    elif not sys.stdin.isatty():
+        text = sys.stdin.read().strip()
+    else:
+        print("Usage: log \"food description\"", file=sys.stderr)
+        sys.exit(1)
+
+    result = log(
+        text=text,
+        user_id=args.user,
+        log_date=args.date,
+        source=args.source,
+    )
+
+    print(result["reply"])
+
+    if result["skipped"]:
+        print(f"⚠ Not matched: {', '.join(result['skipped'])}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
