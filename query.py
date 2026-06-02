@@ -89,6 +89,23 @@ if choice == "1":
     per_food = []
 
     for food, qty_g in items:
+        # MEXT lookup for Japanese foods
+        import mext as _mxt_q
+        import os as _os_q
+        import sqlite3 as _sq_q
+        _mdb_q = _os_q.path.join(_os_q.path.dirname(_os_q.path.abspath(__file__)), "mext.db")
+        _mi_q = _mxt_q.lookup_mext(food.lower().strip())
+        if _mi_q and _os_q.path.exists(_mdb_q):
+            _mn_q = _mxt_q.get_mext_nutrients(_mi_q, _mdb_q)
+            if _mn_q:
+                _c_q = _sq_q.connect(_mdb_q)
+                _r_q = _c_q.execute("SELECT food_name FROM mext_foods WHERE item_no=?", (_mi_q,)).fetchone()
+                _c_q.close()
+                _nm_q = _r_q[0] if _r_q else _mi_q
+                print("     ✓ [MEXT] " + _nm_q)
+                scaled = {k: v * qty_g / 100.0 for k, v in _mn_q.items() if v is not None}
+                per_food.append((food, qty_g, _nm_q, scaled))
+                continue
         term = clean_food_query(food, logger.client)
         match = search_usda(term, config.USDA_KEY)
         if not match:

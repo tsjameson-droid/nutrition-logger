@@ -744,6 +744,8 @@ Rules:
 CLEAN_QUERY_PROMPT = """
 You are a food database search assistant. Your job is to convert a food description
 from a diet diary into a clean, accurate search term for a food composition database.
+import mext as _mext
+_MEXT_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mext.db")
 
 Rules:
 1. ALWAYS keep the core food name — if the diary says "carrots", search for "carrots"
@@ -1016,6 +1018,26 @@ def get_candidates(query: str, usda_key: str, n: int = 5) -> list:
         except Exception:
             pass
 
+    # MEXT candidates (Japanese foods)
+    try:
+        import mext as _mext_gc
+        mext_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mext.db")
+        mext_results = _mext_gc.search_mext(query, mext_db, limit=2)
+        for mr in mext_results:
+            candidates.append({
+                "number": num,
+                "source": "MEXT",
+                "name": mr["food_name"],
+                "match": mr,
+                "item_no": mr["item_no"],
+                "nutrients_100g": None,
+            })
+            num += 1
+            if num > n:
+                break
+    except Exception:
+        pass
+
     return candidates
 
 
@@ -1057,6 +1079,30 @@ def search_all_databases(query: str, usda_key: str, original_food: str = None,
                             "nutrients_100g": nutrients,
                         }
 
+    # ── 1b. MEXT curated lookup (Japanese foods) ─────────────────────────────
+    mext_item = _mext.lookup_mext(query_lower)
+    if not mext_item:
+        for length in range(len(query_lower.split()), 0, -1):
+            partial = " ".join(query_lower.split()[:length])
+            mext_item = _mext.lookup_mext(partial)
+            if mext_item:
+                break
+    if mext_item:
+        mext_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mext.db")
+        mext_nutrients = _mext.get_mext_nutrients(mext_item, mext_db)
+        if mext_nutrients:
+            import sqlite3 as _sq3
+            _mc = _sq3.connect(mext_db)
+            _mr = _mc.execute("SELECT food_name FROM mext_foods WHERE item_no=?", (mext_item,)).fetchone()
+            _mc.close()
+            mext_name = _mr[0] if _mr else mext_item
+            return {
+                "source": "mext",
+                "name": mext_name,
+                "match": {"item_no": mext_item},
+                "nutrients_100g": mext_nutrients,
+            }
+
     # ── 2. Gather candidates ──────────────────────────────────────────────────
     candidates = get_candidates(query, usda_key)
     if not candidates:
@@ -1080,6 +1126,19 @@ def search_all_databases(query: str, usda_key: str, original_food: str = None,
             nutrients = {}
         return {
             "source": "usda",
+            "name": chosen["name"],
+            "match": chosen["match"],
+            "nutrients_100g": nutrients,
+        }
+    elif chosen["source"] == "MEXT":
+        try:
+            import mext as _mext_s4
+            mext_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mext.db")
+            nutrients = _mext_s4.get_mext_nutrients(chosen["item_no"], mext_db)
+        except Exception:
+            nutrients = {}
+        return {
+            "source": "mext",
             "name": chosen["name"],
             "match": chosen["match"],
             "nutrients_100g": nutrients,
@@ -1207,17 +1266,33 @@ class NutritionLogger:
 
             print(f"\n   → {food_name_raw} | {quantity}{unit} ({quantity_g}g)")
 
-            # Clean the food name into a USDA-friendly search term
-            search_term = clean_food_query(food_name_raw, self.client)
-            print(f"     \u27f3 Search term: '{search_term}'")
-
-            # Search USDA + CoFID — Claude picks best match
-            result = search_all_databases(
-                search_term, self.usda_key,
-                original_food=food_name_raw,
-                client=self.client
-            )
-            if result is None:
+            # MEXT lookup: check Japanese DB before transforming the food name
+            import mext as _mxt
+            import os as _os
+            import sqlite3 as _sq
+            _mdb = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "mext.db")
+            _mi = _mxt.lookup_mext(food_name_raw.lower().strip())
+            if _mi and _os.path.exists(_mdb):
+                _mn = _mxt.get_mext_nutrients(_mi, _mdb)
+                if _mn:
+                    _c2 = _sq.connect(_mdb)
+                    _r2 = _c2.execute("SELECT food_name FROM mext_foods WHERE item_no=?", (_mi,)).fetchone()
+                    _c2.close()
+                    _nm = _r2[0] if _r2 else _mi
+                    print("     ✓ [MEXT] " + _nm)
+                    result = {"source": "mext", "name": _nm, "match": {}, "nutrients_100g": _mn}
+                else:
+                    _mi = None
+            if not _mi or not _os.path.exists(_mdb):
+                # Clean the food name into a USDA-friendly search term
+                search_term = clean_food_query(food_name_raw, self.client)
+                print("     ⟳ Search term: " + repr(search_term))
+                # Search USDA + CoFID — Claude picks best match
+                result = search_all_databases(
+                    search_term, self.usda_key,
+                    original_food=food_name_raw,
+                    client=self.client
+                )
                 print(f"     \u26a0 No match found in any database \u2014 logged with nulls")
                 row = self._build_row(
                     log_date, meal_time, meal_category, food_name_raw,
