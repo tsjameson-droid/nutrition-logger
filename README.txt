@@ -2,8 +2,13 @@ NUTRITION LOGGER
 ================
 A personal nutrition tracking system that logs everything you eat
 to a local database with full micro and macronutrient profiles.
-Draws from two food databases: USDA (US) and McCance & Widdowson CoFID (UK).
+Draws from three food composition databases:
+  - USDA FoodData Central (US, ~8,000 foods)
+  - CoFID / McCance & Widdowson (UK, 2,886 foods)
+  - MEXT Standard Tables of Food Composition in Japan 2015 (2,191 foods)
 
+Japanese foods (natto, soba, miso, maitake, tofu, daikon etc.) are
+matched automatically to the MEXT database for the most accurate values.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -97,12 +102,14 @@ FIRST TIME SETUP
       Windows:    C:\Users\YourName\nutrition-logger
 
    The package includes these files — keep them all together:
-      nutrition_logger.py
-      log_today.py
-      query.py
-      setup.py
-      cofid.db         ← UK food database (must be included)
-      README.txt
+      nutrition_logger.py   — main engine
+      log_today.py          — log your diet
+      query.py              — query your data
+      setup.py              — run once on first install
+      mext.py               — Japanese food database module
+      cofid.db              — UK food database
+      mext.db               — Japanese food database
+      README.txt            — this file
 
 3. Open your terminal and navigate to that folder:
       Mac/Linux:  cd ~/nutrition-logger
@@ -125,13 +132,20 @@ Open your terminal, navigate to your folder, then run:
     Mac/Linux:  python3 log_today.py
     Windows:    py log_today.py
 
-You will see a menu with six options:
+You will see a menu with these options:
+
+  LOG FOOD
   1 — Type your food log interactively (meal by meal)
   2 — Load from a typed/digital PDF
   3 — Load from a handwritten PDF (AI reads the handwriting)
   4 — Load from a photo of your food diary (JPG or PNG)
   5 — Edit the text directly in the script
   6 — Retry last transcription (if option 3 or 4 failed mid-way)
+  7 — Log a saved recipe
+
+  RECIPES
+  8 — Save a new recipe
+  9 — View saved recipes
 
 You can run it multiple times per day to add meals as you go.
 Each run adds to the database without overwriting previous entries.
@@ -141,10 +155,17 @@ Type each item on its own line with quantity, e.g.:
   chicken breast grilled 100g
   broccoli raw 120g
   rice white cooked 150g
+  natto 100g
 Type END on its own line when finished.
 
 You will be asked which meal it is (breakfast, lunch, dinner,
 snack, or supplement) before entering items.
+
+DATABASE PRIORITY:
+The system searches three databases in this order:
+  1. MEXT (Japanese foods) — checked first by food name
+  2. CoFID (UK foods) — curated lookup table
+  3. USDA (US/general foods) — Claude picks best match
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -178,12 +199,44 @@ Share all of these (do not leave any out):
     log_today.py          — run this to log your diet
     query.py              — run this to query your data
     setup.py              — run once on first install
+    mext.py               — Japanese database search module
     cofid.db              — UK food composition database
+    mext.db               — Japanese food composition database
     README.txt            — this file
 
 These are created automatically and should NOT be shared:
     config.py             — your private API keys
     nutrition_log.db      — your personal nutrition data
+    recipes.db            — your saved recipes
+
+These are utility scripts — only needed if rebuilding databases:
+    build_mext_db.py      — rebuilds mext.db from the MEXT Excel file
+    patch_mext.py         — one-time integration patch (already applied)
+    patch_query_mext.py   — one-time integration patch (already applied)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DATABASE SOURCES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+USDA FoodData Central (SR Legacy)
+  Source:   US Department of Agriculture
+  Foods:    ~8,000 generic whole foods and ingredients
+  Coverage: General foods, US preparations, good amino acid data
+  Access:   Free API (api.nal.usda.gov)
+
+CoFID — Composition of Foods Integrated Dataset
+  Source:   Public Health England / McCance & Widdowson (2021)
+  Foods:    2,886 UK foods
+  Coverage: UK preparations, fortification levels, metric measures
+  Access:   Bundled as cofid.db (Crown copyright, open government licence)
+
+MEXT — Standard Tables of Food Composition in Japan 2015
+  Source:   Ministry of Education, Culture, Sports, Science and Technology
+  Foods:    2,191 Japanese foods
+  Coverage: Natto, soba, miso, tofu, daikon, maitake, shiitake, wakame,
+            edamame, sake, mirin, dashi, koji and hundreds more
+  Access:   Bundled as mext.db (free public data, mext.go.jp)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
