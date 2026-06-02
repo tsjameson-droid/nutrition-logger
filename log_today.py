@@ -15,6 +15,7 @@ from nutrition_logger import (
     to_grams
 )
 import config, datetime, sys, os, re, sqlite3, json
+import sense_check as _sc
 
 TODAY = datetime.date.today().isoformat()
 

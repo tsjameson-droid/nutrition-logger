@@ -892,25 +892,15 @@ def search_usda(query: str, usda_key: str) -> object:
     return None
 
 
-PICK_MATCH_PROMPT = """
-You are a food matching expert. A user has logged a food item in their diet diary.
-You will be given the original diary entry and a list of candidate matches from
-food composition databases (USDA and CoFID).
+PICK_MATCH_PROMPT = """You are a food matching assistant. Given a diary entry and a numbered list of database candidates, reply with ONLY the number of the best match, or NONE if nothing is suitable.
 
-Your job: pick the single best match, or say NONE if nothing is close enough.
-
-Rules:
-- The match must be the same food as the diary entry — not a different food with
-  a similar name
-- Prefer plain/generic versions over branded, processed, or composite dishes
-- Prefer the cooking method stated in the diary (raw, boiled, grilled, baked etc.)
-- If the diary says "carrots boiled", a match called "Carrots, old, boiled in
-  unsalted water" is correct; "Carrot cake" or "Carrot soup" is not
-- If no candidate is clearly the right food, reply NONE
-
-Reply with ONLY the candidate number (1, 2, 3...) or NONE.
-No explanation. Just the number or NONE.
-"""
+CRITICAL RULES:
+- Prefer fresh, raw, or whole foods unless the diary entry explicitly says dried, dehydrated, powder, canned, or processed.
+- NEVER choose a dried, dehydrated, or powder form when the entry says just the plain food name (e.g. "banana" means fresh banana, NOT banana powder).
+- NEVER choose a concentrate, extract, or supplement form for plain food entries.
+- Prefer the simplest preparation matching the entry. "banana" → raw banana. "chicken" → raw or cooked chicken, not chicken powder.
+- If multiple candidates are equally fresh/raw, prefer the one closest to the exact wording of the diary entry.
+- Reply with ONLY a number (e.g. 3) or the word NONE. No explanation."""
 
 def pick_best_match(original_food: str, candidates: list, client) -> object:
     """

@@ -1,0 +1,35 @@
+{
+  "_comment": "Nutrition sense-check thresholds. Edit these to suit your needs.",
+
+  "daily": {
+    "energy_kcal_min": 1200,
+    "energy_kcal_max": 5000,
+    "protein_g_min": 20,
+    "protein_g_max": 300,
+    "fat_g_min": 10,
+    "fat_g_max": 250,
+    "carbs_g_min": 10,
+    "carbs_g_max": 700,
+    "single_food_energy_pct_max": 60
+  },
+
+  "per_ingredient": {
+    "energy_kcal_per_100g_max": 900,
+    "protein_g_per_100g_max": 90,
+    "fat_g_per_100g_max": 100,
+    "carbs_g_per_100g_max": 100,
+    "single_serving_energy_max": 2000,
+    "quantity_g_max_solid": 800,
+    "quantity_ml_max_liquid": 2000
+  },
+
+  "food_type_energy_ranges": {
+    "_comment": "Expected kcal/100g ranges by broad category. Keywords matched against food name.",
+    "vegetable": {"keywords": ["broccoli","spinach","kale","cabbage","carrot","celery","cucumber","tomato","pepper","courgette","aubergine","onion","leek","asparagus","mushroom","pea","bean sprout","lettuce","rocket","watercress","daikon","edamame"], "min": 5, "max": 120},
+    "fruit": {"keywords": ["apple","banana","orange","grape","strawberry","blueberry","raspberry","mango","pineapple","watermelon","melon","pear","peach","plum","cherry","lemon","lime"], "min": 20, "max": 100},
+    "oil_fat": {"keywords": ["oil","butter","lard","ghee","dripping","suet","margarine","mayonnaise"], "min": 600, "max": 920},
+    "lean_meat": {"keywords": ["chicken breast","turkey breast","cod","haddock","tuna","prawn","shrimp","white fish"], "min": 70, "max": 200},
+    "coffee_tea": {"keywords": ["coffee","tea","espresso","americano"], "min": 0, "max": 30},
+    "water": {"keywords": ["water","sparkling water","mineral water"], "min": 0, "max": 5}
+  }
+}

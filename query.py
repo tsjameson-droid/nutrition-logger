@@ -8,8 +8,9 @@ Two modes:
 Run: python3 query.py
 """
 
-from nutrition_logger import NutritionLogger, search_usda, get_usda_nutrients, scale_nutrients, clean_food_query
+from nutrition_logger import NutritionLogger, search_usda, search_all_databases, get_usda_nutrients, scale_nutrients, clean_food_query
 import config, sqlite3, datetime, json
+import sense_check as _sc
 
 TODAY = datetime.date.today().isoformat()
 
@@ -104,16 +105,59 @@ if choice == "1":
                 _nm_q = _r_q[0] if _r_q else _mi_q
                 print("     ✓ [MEXT] " + _nm_q)
                 scaled = {k: v * qty_g / 100.0 for k, v in _mn_q.items() if v is not None}
+                # Sense check before logging
+                def _do_lookup(new_food, new_qty):
+                    import mext as _mxt_sc, os as _os_sc, sqlite3 as _sq_sc
+                    _mdb = _os_sc.path.join(_os_sc.path.dirname(_os_sc.path.abspath(__file__)), "mext.db")
+                    _mi = _mxt_sc.lookup_mext(new_food.lower().strip())
+                    if _mi and _os_sc.path.exists(_mdb):
+                        _mn2 = _mxt_sc.get_mext_nutrients(_mi, _mdb)
+                        if _mn2:
+                            _c3 = _sq_sc.connect(_mdb)
+                            _r3 = _c3.execute("SELECT food_name FROM mext_foods WHERE item_no=?", (_mi,)).fetchone()
+                            _c3.close()
+                            return (_r3[0] if _r3 else _mi), _mn2
+                    _m2 = search_usda(clean_food_query(new_food, logger.client), config.USDA_KEY)
+                    if _m2:
+                        _n2 = get_usda_nutrients(_m2["fdcId"], config.USDA_KEY)
+                        _n2s = scale_nutrients(_n2, new_qty)
+                        return _m2["description"], _n2
+                    return None, {}
+                _sc_accepted, food, qty_g, _sc_n100 = _sc.resolve_ingredient(
+                    food, qty_g, _mn_q, _do_lookup)
+                if not _sc_accepted:
+                    continue
+                # Update scaled with potentially corrected nutrients
+                if _sc_n100:
+                    scaled = scale_nutrients(_sc_n100, qty_g)
                 per_food.append((food, qty_g, _nm_q, scaled))
                 continue
         term = clean_food_query(food, logger.client)
-        match = search_usda(term, config.USDA_KEY)
-        if not match:
+        result = search_all_databases(term, config.USDA_KEY,
+                                      original_food=food,
+                                      client=logger.client)
+        if not result:
             print(f"  ✗ No match found for: {food}")
             continue
-        n100 = get_usda_nutrients(match["fdcId"], config.USDA_KEY)
+        n100 = result["nutrients_100g"]
+        matched_name = result["name"]
+        # Sense check on per-100g nutrients
+        def _do_lookup2(new_food, new_qty):
+            r2 = search_all_databases(clean_food_query(new_food, logger.client),
+                                      config.USDA_KEY,
+                                      original_food=new_food,
+                                      client=logger.client)
+            if r2:
+                return r2["name"], r2["nutrients_100g"]
+            return None, {}
+        _sc2_ok, food, qty_g, _sc2_n100 = _sc.resolve_ingredient(
+            food, qty_g, n100, _do_lookup2)
+        if not _sc2_ok:
+            continue
+        if _sc2_n100:
+            n100 = _sc2_n100
         scaled = scale_nutrients(n100, qty_g)
-        per_food.append((food, qty_g, match["description"], scaled))
+        per_food.append((food, qty_g, matched_name, scaled))
         for name, _ in NUTRIENTS:
             totals[name] += scaled.get(name) or 0.0
 
@@ -133,6 +177,10 @@ if choice == "1":
 
     # Print totals
     print(f"{'='*55}")
+    # Daily totals sense check
+    _food_contribs = [(f, s.get("energy_kcal", 0) or 0) for f, _, _, s in per_food]
+    _sc.resolve_daily_totals(totals, food_contributions=_food_contribs)
+    
     print("MEAL TOTALS")
     print(f"{'='*55}")
     print(f"  {'Nutrient':<22} {'Total':>12}")
